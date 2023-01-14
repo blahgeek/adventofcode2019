@@ -3,37 +3,45 @@ name = "adv2019"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "adv2019"
+path = "src/lib.rs"
+
+[[bin]]
+name = "main"
+path = "src/bin/main.rs"
+
 [[bin]]
 name = "ans1"
-path = "src/ans1.rs"
+path = "src/bin/ans1.rs"
 
 [[bin]]
 name = "ans1b"
-path = "src/ans1b.rs"
+path = "src/bin/ans1b.rs"
 
 [[bin]]
 name = "ans2"
-path = "src/ans2.rs"
+path = "src/bin/ans2.rs"
 
 [[bin]]
 name = "ans3"
-path = "src/ans3.rs"
+path = "src/bin/ans3.rs"
 
 [[bin]]
 name = "ans4"
-path = "src/ans4.rs"
+path = "src/bin/ans4.rs"
 
 [[bin]]
 name = "ans5"
-path = "src/ans5.rs"
+path = "src/bin/ans5.rs"
 
 [[bin]]
 name = "ans6"
-path = "src/ans6.rs"
+path = "src/bin/ans6.rs"
 
 [[bin]]
 name = "ans7"
-path = "src/ans7.rs"
+path = "src/bin/ans7.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
