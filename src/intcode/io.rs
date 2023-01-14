@@ -12,12 +12,18 @@ pub trait Output {
 
 
 pub struct BufferInput {
-    pub inputs: VecDeque<Word>,
+    inputs: VecDeque<Word>,
 }
 
 impl Input for BufferInput {
     fn read(&mut self) -> Option<Word> {
         self.inputs.pop_front()
+    }
+}
+
+impl BufferInput {
+    pub fn new(vals: &[Word]) -> Self {
+        BufferInput { inputs: VecDeque::from(Vec::<Word>::from(vals)) }
     }
 }
 
