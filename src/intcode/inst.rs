@@ -17,7 +17,7 @@ impl Operation {
     pub fn instruction_len(&self) -> usize {
         match self {
             Self::Add | Self::Multiply | Self::LessThan | Self::Equals => 4,
-            Self::JumpIfTrue | Self::JumpIfFalse => 2,
+            Self::JumpIfTrue | Self::JumpIfFalse => 3,
             Self::Input | Self::Output => 2,
             Self::Halt => 1,
         }
