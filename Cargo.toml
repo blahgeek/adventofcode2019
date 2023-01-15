@@ -47,6 +47,10 @@ path = "src/bin/ans7.rs"
 name = "ans8"
 path = "src/bin/ans8.rs"
 
+[[bin]]
+name = "ans9"
+path = "src/bin/ans9.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

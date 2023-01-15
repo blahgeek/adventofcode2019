@@ -1,9 +1,12 @@
 use super::inst::*;
 use super::io::*;
 
+use std::collections::BTreeMap;
+
 pub struct IntcodeComputer<IN, OUT> {
-    mem: Vec<Word>,
+    mem: BTreeMap<usize, Word>,
     pc: usize,
+    relative_base: usize,
 
     input: IN,
     output: OUT,
@@ -13,9 +16,12 @@ impl<IN, OUT> IntcodeComputer<IN, OUT>
 where IN: Input, OUT: Output {
 
     pub fn new(initial_mem: Vec<Word>, input: IN, output: OUT) -> Self {
+        let mem : BTreeMap<usize, Word> =
+            BTreeMap::from_iter(initial_mem.into_iter().enumerate());
         IntcodeComputer {
-            mem: initial_mem,
+            mem,
             pc: 0,
+            relative_base: 0,
             input, output
         }
     }
@@ -28,17 +34,22 @@ where IN: Input, OUT: Output {
         &&self.output
     }
 
-    fn get_mem(&self, param: Parameter) -> Word {
+    fn read_param(&self, param: Parameter) -> Word {
         match param {
-            Parameter::Position(i) => self.mem[i],
+            Parameter::AbsPosition(i) => self.mem.get(&i).copied().unwrap_or(0),
+            Parameter::RelPosition(i) =>
+                self.mem.get(&((self.relative_base as i64 + i) as usize)).copied().unwrap_or(0),
             Parameter::Immediate(v) => v,
         }
     }
 
-    fn set_mem(&mut self, param: Parameter, val: Word) {
+    fn write_param(&mut self, param: Parameter, val: Word) {
         match param {
             Parameter::Immediate(_) => panic!("Cannot set with immediate param"),
-            Parameter::Position(i) => self.mem[i] = val,
+            Parameter::AbsPosition(i) => { self.mem.insert(i, val); },
+            Parameter::RelPosition(i) => {
+                self.mem.insert((self.relative_base as i64 + i) as usize, val);
+            },
         }
     }
 
@@ -46,28 +57,32 @@ where IN: Input, OUT: Output {
         let mut new_pc: Option<usize> = None;
         match inst.op {
             Operation::Add =>
-                self.set_mem(inst.params[2], self.get_mem(inst.params[0]) + self.get_mem(inst.params[1])),
+                self.write_param(inst.params[2], self.read_param(inst.params[0]) + self.read_param(inst.params[1])),
             Operation::Multiply =>
-                self.set_mem(inst.params[2], self.get_mem(inst.params[0]) * self.get_mem(inst.params[1])),
+                self.write_param(inst.params[2], self.read_param(inst.params[0]) * self.read_param(inst.params[1])),
             Operation::LessThan =>
-                self.set_mem(inst.params[2], if self.get_mem(inst.params[0]) < self.get_mem(inst.params[1]) { 1 } else { 0 }),
+                self.write_param(inst.params[2], if self.read_param(inst.params[0]) < self.read_param(inst.params[1]) { 1 } else { 0 }),
             Operation::Equals =>
-                self.set_mem(inst.params[2], if self.get_mem(inst.params[0]) == self.get_mem(inst.params[1]) { 1 } else { 0 }),
+                self.write_param(inst.params[2], if self.read_param(inst.params[0]) == self.read_param(inst.params[1]) { 1 } else { 0 }),
             Operation::Input => {
                 let v = self.input.read().unwrap();
-                self.set_mem(inst.params[0], v);
+                self.write_param(inst.params[0], v);
             },
             Operation::Output =>
-                self.output.write(self.get_mem(inst.params[0])),
+                self.output.write(self.read_param(inst.params[0])),
             Operation::JumpIfTrue => {
-                if self.get_mem(inst.params[0]) != 0 {
-                    new_pc = Some(self.get_mem(inst.params[1]) as usize);
+                if self.read_param(inst.params[0]) != 0 {
+                    new_pc = Some(self.read_param(inst.params[1]) as usize);
                 }
             },
             Operation::JumpIfFalse => {
-                if self.get_mem(inst.params[0]) == 0 {
-                    new_pc = Some(self.get_mem(inst.params[1]) as usize);
+                if self.read_param(inst.params[0]) == 0 {
+                    new_pc = Some(self.read_param(inst.params[1]) as usize);
                 }
+            },
+            Operation::AdjustRelativeBase => {
+                let delta = self.read_param(inst.params[0]);
+                self.relative_base = (self.relative_base as i64 + delta) as usize;
             },
             Operation::Halt => panic!("should not arrive here"),
         }
@@ -79,17 +94,13 @@ where IN: Input, OUT: Output {
     }
 
     fn parse_next_instruction(&self) -> Option<Instruction> {
-        let inst = self.mem.get(self.pc)?;
+        let inst = self.read_param(Parameter::AbsPosition(self.pc));
         let op = Operation::from(inst % 100);
         let mut params = Vec::<Parameter>::new();
         for i in 0..(op.instruction_len()-1) {
-            let v = *self.mem.get(self.pc+i+1)?;
-            let param = match (inst / 100 / (10i64.pow(i as u32))) % 10 { // mode
-                1 => Parameter::Immediate(v),
-                0 => Parameter::Position(v as usize),
-                _ => return None,
-            };
-            params.push(param);
+            let v = self.read_param(Parameter::AbsPosition(self.pc+i+1));
+            let mode = (inst / 100 / (10i64.pow(i as u32))) % 10;
+            params.push(Parameter::new(mode as i8, v));
         }
         Some(Instruction { op, params })
     }
